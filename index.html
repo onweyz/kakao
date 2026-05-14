@@ -1,205 +1,189 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="ko">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2685.3">
-  <style type="text/css">
-    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
-    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카카오맵 장소 검색 서비스</title>
+    <style>
+        /* 기본 스타일 초기화 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { width: 100%; height: 100%; font-family: 'Malgun Gothic', sans-serif; }
+
+        /* 화면 2분할 레이아웃 */
+        .container { display: flex; width: 100%; height: 100vh; }
+
+        /* 왼쪽 검색 영역 */
+        #menu_wrap {
+            width: 350px;
+            height: 100%;
+            padding: 15px;
+            background: #f7f7f7;
+            overflow-y: auto;
+            border-right: 1px solid #ddd;
+            z-index: 10;
+        }
+
+        .search_box { margin-bottom: 20px; }
+        input[type="text"] { width: 70%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 12px; background: #fee500; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+        /* 검색 결과 리스트 스타일 */
+        #placesList { list-style: none; margin-top: 10px; }
+        #placesList li { 
+            padding: 10px; 
+            border-bottom: 1px solid #eee; 
+            background: white; 
+            margin-bottom: 5px; 
+            border-radius: 4px;
+        }
+
+        /* 오른쪽 지도 영역 */
+        #map { flex: 1; height: 100%; }
+    </style>
 </head>
 <body>
-<p class="p1">&lt;!DOCTYPE html&gt;</p>
-<p class="p1">&lt;html lang="ko"&gt;</p>
-<p class="p1">&lt;head&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta charset="UTF-8"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;title&gt;카카오맵 장소 검색 서비스&lt;/title&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;style&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>/* 기본 스타일 초기화 */</p>
-<p class="p1"><span class="Apple-converted-space">        </span>* { margin: 0; padding: 0; box-sizing: border-box; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>body, html { width: 100%; height: 100%; font-family: 'Malgun Gothic', sans-serif; }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>/* 화면 2분할 레이아웃 */</p>
-<p class="p1"><span class="Apple-converted-space">        </span>.container { display: flex; width: 100%; height: 100vh; }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>/* 왼쪽 검색 영역 */</p>
-<p class="p1"><span class="Apple-converted-space">        </span>#menu_wrap {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>width: 350px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>height: 100%;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>padding: 15px;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>background: #f7f7f7;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>overflow-y: auto;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-right: 1px solid #ddd;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>z-index: 10;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>.search_box { margin-bottom: 20px; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>input[type="text"] { width: 70%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>button { padding: 8px 12px; background: #fee500; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>/* 검색 결과 리스트 스타일 */</p>
-<p class="p1"><span class="Apple-converted-space">        </span>#placesList { list-style: none; margin-top: 10px; }</p>
-<p class="p1"><span class="Apple-converted-space">        </span>#placesList li {<span class="Apple-converted-space"> </span></p>
-<p class="p1"><span class="Apple-converted-space">            </span>padding: 10px;<span class="Apple-converted-space"> </span></p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-bottom: 1px solid #eee;<span class="Apple-converted-space"> </span></p>
-<p class="p1"><span class="Apple-converted-space">            </span>background: white;<span class="Apple-converted-space"> </span></p>
-<p class="p1"><span class="Apple-converted-space">            </span>margin-bottom: 5px;<span class="Apple-converted-space"> </span></p>
-<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 4px;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>/* 오른쪽 지도 영역 */</p>
-<p class="p1"><span class="Apple-converted-space">        </span>#map { flex: 1; height: 100%; }</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/style&gt;</p>
-<p class="p1">&lt;/head&gt;</p>
-<p class="p1">&lt;body&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;div class="container"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="menu_wrap"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="search_box"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;form onsubmit="searchPlaces(); return false;"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                </span>&lt;input type="text" id="keyword" placeholder="장소를 입력하세요" value="이태원 맛집"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                </span>&lt;button type="submit"&gt;검색&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>&lt;/form&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;hr&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>&lt;ul id="placesList"&gt;&lt;/ul&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="map"&gt;&lt;/div&gt;</p>
-<p class="p1">&lt;/div&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d6161b499d7ebcb40a09bb45b6b3d55c&amp;libraries=services&amp;autoload=false"&gt;&lt;/script&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;script&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>let map;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>let ps; // 장소 검색 객체</p>
-<p class="p1"><span class="Apple-converted-space">    </span>let markers = []; // 마커를 담을 배열</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>// 1. SDK가 로드된 후 실행되도록 kakao.maps.load 사용</p>
-<p class="p1"><span class="Apple-converted-space">    </span>kakao.maps.load(function() {</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const mapContainer = document.getElementById('map');<span class="Apple-converted-space"> </span></p>
-<p class="p1"><span class="Apple-converted-space">        </span>const mapOption = {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>center: new kakao.maps.LatLng(37.566826, 126.9786567), // 기본 위치 (서울시청)</p>
-<p class="p1"><span class="Apple-converted-space">            </span>level: 5 // 확대 레벨</p>
-<p class="p1"><span class="Apple-converted-space">        </span>};</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>// 지도 생성</p>
-<p class="p1"><span class="Apple-converted-space">        </span>map = new kakao.maps.Map(mapContainer, mapOption);<span class="Apple-converted-space"> </span></p>
-<p class="p1"><span class="Apple-converted-space">        </span>// 장소 검색 객체 생성</p>
-<p class="p1"><span class="Apple-converted-space">        </span>ps = new kakao.maps.services.Places();<span class="Apple-converted-space"> </span></p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>// 2. 현재 위치 가져오기 (Geolocation)</p>
-<p class="p1"><span class="Apple-converted-space">        </span>getCurrentLocation();</p>
-<p class="p1"><span class="Apple-converted-space">    </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>// 현재 위치를 구하는 함수</p>
-<p class="p1"><span class="Apple-converted-space">    </span>function getCurrentLocation() {</p>
-<p class="p1"><span class="Apple-converted-space">        </span>if (navigator.geolocation) {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>navigator.geolocation.getCurrentPosition(function(position) {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>const lat = position.coords.latitude; // 위도</p>
-<p class="p1"><span class="Apple-converted-space">                </span>const lon = position.coords.longitude; // 경도</p>
-<p class="p1"><span class="Apple-converted-space">                </span>const locPosition = new kakao.maps.LatLng(lat, lon);</p>
-<p class="p2"><span class="Apple-converted-space">                </span></p>
-<p class="p1"><span class="Apple-converted-space">                </span>// 지도 중심을 현재 위치로 이동</p>
-<p class="p1"><span class="Apple-converted-space">                </span>map.setCenter(locPosition);</p>
-<p class="p2"><span class="Apple-converted-space">                </span></p>
-<p class="p1"><span class="Apple-converted-space">                </span>// 현재 위치에 마커 표시 (선택 사항)</p>
-<p class="p1"><span class="Apple-converted-space">                </span>const marker = new kakao.maps.Marker({</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>map: map,</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>position: locPosition</p>
-<p class="p1"><span class="Apple-converted-space">                </span>});</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}, function(err) {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>console.error("위치 권한을 거부했거나 오류가 발생했습니다.");</p>
-<p class="p1"><span class="Apple-converted-space">            </span>});</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>// 장소 검색 함수</p>
-<p class="p1"><span class="Apple-converted-space">    </span>function searchPlaces() {</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const keyword = document.getElementById('keyword').value;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>if (!keyword.replace(/^\s+|\s+$/g, '')) {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>alert('키워드를 입력해주세요!');</p>
-<p class="p1"><span class="Apple-converted-space">            </span>return false;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>// 장소 검색 실행</p>
-<p class="p1"><span class="Apple-converted-space">        </span>ps.keywordSearch(keyword, placesSearchCB);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>// 장소 검색 완료 시 호출되는 콜백 함수</p>
-<p class="p1"><span class="Apple-converted-space">    </span>function placesSearchCB(data, status, pagination) {</p>
-<p class="p1"><span class="Apple-converted-space">        </span>if (status === kakao.maps.services.Status.OK) {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>displayPlaces(data);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>} else if (status === kakao.maps.services.Status.ZERO_RESULT) {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>alert('검색 결과가 존재하지 않습니다.');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>} else if (status === kakao.maps.services.Status.ERROR) {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>alert('검색 결과 중 오류가 발생했습니다.');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>// 검색 결과 목록과 마커를 표출하는 함수</p>
-<p class="p1"><span class="Apple-converted-space">    </span>function displayPlaces(places) {</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const listEl = document.getElementById('placesList');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const bounds = new kakao.maps.LatLngBounds();</p>
-<p class="p2"><span class="Apple-converted-space">        </span></p>
-<p class="p1"><span class="Apple-converted-space">        </span>// 기존 검색 결과 및 마커 제거</p>
-<p class="p1"><span class="Apple-converted-space">        </span>listEl.innerHTML = '';</p>
-<p class="p1"><span class="Apple-converted-space">        </span>removeMarkers();</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>for (let i = 0; i &lt; places.length; i++) {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>const placePosition = new kakao.maps.LatLng(places[i].y, places[i].x);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>const marker = addMarker(placePosition);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>const itemEl = getListItem(i, places[i]); // 목록 아이템 생성</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">            </span>// 검색된 장소 위치를 기준으로 지도 범위 재설정하기 위해 좌표 추가</p>
-<p class="p1"><span class="Apple-converted-space">            </span>bounds.extend(placePosition);</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">            </span>listEl.appendChild(itemEl);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">        </span>// 검색된 장소들이 다 보이도록 지도 범위 조정</p>
-<p class="p1"><span class="Apple-converted-space">        </span>map.setBounds(bounds);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>// 리스트 아이템 HTML 생성 함수</p>
-<p class="p1"><span class="Apple-converted-space">    </span>function getListItem(index, places) {</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const el = document.createElement('li');</p>
-<p class="p1"><span class="Apple-converted-space">        </span>let itemStr = `&lt;strong&gt;${places.place_name}&lt;/strong&gt;`;</p>
-<p class="p2"><span class="Apple-converted-space">        </span></p>
-<p class="p1"><span class="Apple-converted-space">        </span>if (places.road_address_name) {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>itemStr += `&lt;br&gt;&lt;span&gt;${places.road_address_name}&lt;/span&gt;`;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>} else {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>itemStr += `&lt;br&gt;&lt;span&gt;${places.address_name}&lt;/span&gt;`;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p2"><span class="Apple-converted-space">        </span></p>
-<p class="p1"><span class="Apple-converted-space">        </span>el.innerHTML = itemStr;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>return el;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>// 마커 생성 함수</p>
-<p class="p1"><span class="Apple-converted-space">    </span>function addMarker(position) {</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const marker = new kakao.maps.Marker({</p>
-<p class="p1"><span class="Apple-converted-space">            </span>position: position,</p>
-<p class="p1"><span class="Apple-converted-space">            </span>map: map</p>
-<p class="p1"><span class="Apple-converted-space">        </span>});</p>
-<p class="p1"><span class="Apple-converted-space">        </span>markers.push(marker);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>return marker;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>// 지도 위 마커 제거 함수</p>
-<p class="p1"><span class="Apple-converted-space">    </span>function removeMarkers() {</p>
-<p class="p1"><span class="Apple-converted-space">        </span>for (let i = 0; i &lt; markers.length; i++) {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>markers[i].setMap(null);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>markers = [];</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1">&lt;/script&gt;</p>
-<p class="p1">&lt;/body&gt;</p>
-<p class="p1">&lt;/html&gt;</p>
+
+<div class="container">
+    <div id="menu_wrap">
+        <div class="search_box">
+            <form onsubmit="searchPlaces(); return false;">
+                <input type="text" id="keyword" placeholder="장소를 입력하세요" value="이태원 맛집">
+                <button type="submit">검색</button>
+            </form>
+        </div>
+        <hr>
+        <ul id="placesList"></ul>
+    </div>
+
+    <div id="map"></div>
+</div>
+
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d6161b499d7ebcb40a09bb45b6b3d55c&libraries=services&autoload=false"></script>
+
+<script>
+    let map;
+    let ps; // 장소 검색 객체
+    let markers = []; // 마커를 담을 배열
+
+    // 1. SDK가 로드된 후 실행되도록 kakao.maps.load 사용
+    kakao.maps.load(function() {
+        const mapContainer = document.getElementById('map'); 
+        const mapOption = {
+            center: new kakao.maps.LatLng(37.566826, 126.9786567), // 기본 위치 (서울시청)
+            level: 5 // 확대 레벨
+        };
+
+        // 지도 생성
+        map = new kakao.maps.Map(mapContainer, mapOption); 
+        // 장소 검색 객체 생성
+        ps = new kakao.maps.services.Places(); 
+
+        // 2. 현재 위치 가져오기 (Geolocation)
+        getCurrentLocation();
+    });
+
+    // 현재 위치를 구하는 함수
+    function getCurrentLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude; // 위도
+                const lon = position.coords.longitude; // 경도
+                const locPosition = new kakao.maps.LatLng(lat, lon);
+                
+                // 지도 중심을 현재 위치로 이동
+                map.setCenter(locPosition);
+                
+                // 현재 위치에 마커 표시 (선택 사항)
+                const marker = new kakao.maps.Marker({
+                    map: map,
+                    position: locPosition
+                });
+            }, function(err) {
+                console.error("위치 권한을 거부했거나 오류가 발생했습니다.");
+            });
+        }
+    }
+
+    // 장소 검색 함수
+    function searchPlaces() {
+        const keyword = document.getElementById('keyword').value;
+
+        if (!keyword.replace(/^\s+|\s+$/g, '')) {
+            alert('키워드를 입력해주세요!');
+            return false;
+        }
+
+        // 장소 검색 실행
+        ps.keywordSearch(keyword, placesSearchCB);
+    }
+
+    // 장소 검색 완료 시 호출되는 콜백 함수
+    function placesSearchCB(data, status, pagination) {
+        if (status === kakao.maps.services.Status.OK) {
+            displayPlaces(data);
+        } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+            alert('검색 결과가 존재하지 않습니다.');
+        } else if (status === kakao.maps.services.Status.ERROR) {
+            alert('검색 결과 중 오류가 발생했습니다.');
+        }
+    }
+
+    // 검색 결과 목록과 마커를 표출하는 함수
+    function displayPlaces(places) {
+        const listEl = document.getElementById('placesList');
+        const bounds = new kakao.maps.LatLngBounds();
+        
+        // 기존 검색 결과 및 마커 제거
+        listEl.innerHTML = '';
+        removeMarkers();
+
+        for (let i = 0; i < places.length; i++) {
+            const placePosition = new kakao.maps.LatLng(places[i].y, places[i].x);
+            const marker = addMarker(placePosition);
+            const itemEl = getListItem(i, places[i]); // 목록 아이템 생성
+
+            // 검색된 장소 위치를 기준으로 지도 범위 재설정하기 위해 좌표 추가
+            bounds.extend(placePosition);
+
+            listEl.appendChild(itemEl);
+        }
+
+        // 검색된 장소들이 다 보이도록 지도 범위 조정
+        map.setBounds(bounds);
+    }
+
+    // 리스트 아이템 HTML 생성 함수
+    function getListItem(index, places) {
+        const el = document.createElement('li');
+        let itemStr = `<strong>${places.place_name}</strong>`;
+        
+        if (places.road_address_name) {
+            itemStr += `<br><span>${places.road_address_name}</span>`;
+        } else {
+            itemStr += `<br><span>${places.address_name}</span>`;
+        }
+        
+        el.innerHTML = itemStr;
+        return el;
+    }
+
+    // 마커 생성 함수
+    function addMarker(position) {
+        const marker = new kakao.maps.Marker({
+            position: position,
+            map: map
+        });
+        markers.push(marker);
+        return marker;
+    }
+
+    // 지도 위 마커 제거 함수
+    function removeMarkers() {
+        for (let i = 0; i < markers.length; i++) {
+            markers[i].setMap(null);
+        }
+        markers = [];
+    }
+</script>
 </body>
 </html>
