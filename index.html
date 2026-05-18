@@ -1,329 +1,385 @@
-<!DOCTYPE html>
-<html lang="ko">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>우리 동네 열공 & 먹방 지도 서비스</title>
-    <style>
-        /* 기본 스타일 초기화 */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body, html {
-            width: 100%;
-            height: 100%;
-            font-family: 'Malgun Gothic', dotum, sans-serif;
-        }
-
-        /* 왼쪽(리스트)과 오른쪽(지도) 2분할 레이아웃 */
-        .container {
-            display: flex;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* 왼쪽 사이드바 스타일 */
-        .sidebar {
-            width: 360px;
-            height: 100%;
-            background-color: #f9f9f9;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #e0e0e0;
-            z-index: 10;
-        }
-
-        /* 검색창 영역 */
-        .search-box {
-            padding: 20px;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .search-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .search-form {
-            display: flex;
-            gap: 6px;
-        }
-
-        .search-input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .search-button {
-            padding: 10px 16px;
-            background-color: #ffca28; /* 따뜻한 노란색 포인트 */
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .search-button:hover {
-            background-color: #ffb300;
-        }
-
-        /* 결과 리스트 영역 (스크롤 가능) */
-        .places-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-        }
-
-        /* 리스트 내부의 각 장소 아이템 */
-        .place-item {
-            padding: 15px;
-            background-color: #fff;
-            margin-bottom: 12px;
-            border-radius: 6px;
-            border: 1px solid #e2e8f0;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .place-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            background-color: #fffdf0;
-        }
-
-        .place-name {
-            font-weight: bold;
-            font-size: 16px;
-            color: #2d3748;
-            margin-bottom: 6px;
-        }
-
-        .place-phone {
-            font-size: 13px;
-            color: #4a5568;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        /* 오른쪽 지도 영역 */
-        .map-container {
-            flex: 1;
-            height: 100%;
-        }
-
-        /* 인포윈도우(팝업) 커스텀 스타일 */
-        .popup-card {
-            padding: 10px;
-            font-size: 13px;
-            line-height: 1.4;
-        }
-        .popup-card a {
-            color: #dd6b20;
-            text-decoration: none;
-            font-weight: bold;
-        }
-    </style>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2685.3">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  </style>
 </head>
 <body>
-
-    <div class="container">
-        <div class="sidebar">
-            <div class="search-box">
-                <div class="search-title">🏫 열공 & 먹방 스팟 찾기</div>
-                <form class="search-form" onsubmit="searchPlaces(); return false;">
-                    <input type="text" id="keyword" class="search-input" placeholder="동네이름 + 스터디카페 또는 분식 입력" value="명일동 스터디카페">
-                    <button type="submit" class="search-button">검색</button>
-                </form>
-            </div>
-            <div id="placesList" class="places-list"></div>
-        </div>
-
-        <div id="map" class="map-container"></div>
-    </div>
-
-    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d6161b499d7ebcb40a09bb45b6b3d55c&libraries=services"></script>
-    
-    <script>
-        // 전역 변수 선언
-        let map; 
-        let placeSearchService; 
-        let currentMarkers = []; // 지도에 생성된 마커들을 관리할 배열
-        let infoWindow;         // 마커를 클릭했을 때 띄울 팝업창 객체
-
-        // 페이지 로드가 완료되면 카카오맵을 초기화
-        window.addEventListener('DOMContentLoaded', function() {
-            if (typeof kakao !== 'undefined' && kakao.maps) {
-                initMap();
-            } else {
-                alert("카카오 지도 라이브러리 로딩에 실패했습니다. API 키를 확인해 주세요.");
-            }
-        });
-
-        // 지도의 기본 설정을 잡고 생성하는 함수
-        function initMap() {
-            const mapContainer = document.getElementById('map'); 
-            
-            // 사용자의 실제 위치 기반 허용 받기
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    const userPosition = new kakao.maps.LatLng(lat, lon);
-                    
-                    // 지도 옵션 설정 (확대 레벨 5)
-                    const mapOptions = {
-                        center: userPosition,
-                        level: 5
-                    };
-                    map = new kakao.maps.Map(mapContainer, mapOptions);
-                    
-                    // 초기화 완료 후 서비스 객체들 생성
-                    setupServices();
-                }, function(error) {
-                    // 위치 권한 거부 시 기본 좌표(서울 중심)로 설정
-                    createMapWithDefault();
-                });
-            } else {
-                createMapWithDefault();
-            }
-        }
-
-        // 기본 좌표로 지도를 만드는 함수 (기본 처리용)
-        function createMapWithDefault() {
-            const mapContainer = document.getElementById('map'); 
-            const defaultPosition = new kakao.maps.LatLng(37.566826, 126.9786567); 
-            const mapOptions = {
-                center: defaultPosition,
-                level: 5
-            };
-            map = new kakao.maps.Map(mapContainer, mapOptions);
-            setupServices();
-        }
-
-        // 검색 서비스 및 인포윈도우 객체를 준비하는 함수
-        function setupServices() {
-            placeSearchService = new kakao.maps.services.Places();
-            infoWindow = new kakao.maps.InfoWindow({ zIndex: 1 });
-        }
-
-        // 검색 버튼을 누르면 작동하는 함수
-        function searchPlaces() {
-            const keyword = document.getElementById('keyword').value;
-
-            if (!keyword.trim()) {
-                alert('동네이름과 찾고 싶은 키워드를 함께 입력해 주세요!');
-                return false;
-            }
-
-            // 카카오 keywordSearch API를 이용하여 주변 장소 검색 요청
-            placeSearchService.keywordSearch(keyword, searchCallback);
-        }
-
-        // 장소 검색 완료 시 데이터를 받아오는 콜백 함수
-        function searchCallback(data, status, pagination) {
-            if (status === kakao.maps.services.Status.OK) {
-                // 정상적으로 검색되면 결과를 화면과 지도에 표시
-                displayResults(data);
-            } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
-                alert('검색 결과가 없습니다. 다른 동네나 키워드로 검색해 보세요!');
-            } else if (status === kakao.maps.services.Status.ERROR) {
-                alert('검색 중 오류가 발생했습니다.');
-            }
-        }
-
-        // 결과를 지도와 왼쪽 리스트에 뿌려주는 핵심 함수
-        function displayResults(places) {
-            const listContainer = document.getElementById('placesList');
-            
-            // [구체적 지시] 새로 검색할 때 기존 마커와 리스트 내용은 지우기 실행
-            clearPreviousResults();
-            listContainer.innerHTML = '';
-
-            // 검색된 모든 장소가 한눈에 들어오도록 지도의 경계면을 넓힐 객체
-            const mapBounds = new kakao.maps.LatLngBounds();
-
-            for (let i = 0; i < places.length; i++) {
-                const placePosition = new kakao.maps.LatLng(places[i].y, places[i].x);
-                
-                // [구체적 지시] 지도에 별 모양 커스텀 마커로 표시하기
-                const markerImageSrc = 'https://t1.daumcdn.net/localimg/localimages/07/2012/img/marker_normal.png'; // 카카오 기본 별모양/핀 대용 이미지 
-                const markerImageSize = new kakao.maps.Size(24, 35);
-                const customMarkerImage = new kakao.maps.MarkerImage(markerImageSrc, markerImageSize);
-
-                const marker = new kakao.maps.Marker({
-                    position: placePosition,
-                    image: customMarkerImage,
-                    map: map
-                });
-
-                // 생성한 마커를 배열에 담아 추후 삭제할 수 있도록 관리
-                currentMarkers.push(marker);
-
-                // [구체적 지시] 왼쪽 리스트에 상호명(이름)과 전화번호 나열
-                const itemElement = document.createElement('div');
-                itemElement.className = 'place-item';
-                
-                // 전화번호가 없을 경우를 대비한 예외 처리
-                const phoneNumber = places[i].phone ? places[i].phone : '전화번호가 등록되지 않은 곳입니다.';
-
-                itemElement.innerHTML = `
-                    <div class="place-name">${places[i].place_name}</div>
-                    <div class="place-phone">📞 ${phoneNumber}</div>
-                `;
-
-                // [구체적 지시] 팝업창에 채울 내용 정의 (이름, 주소, 카카오맵 상세 링크)
-                const popupHtmlContent = `
-                    <div class="popup-card">
-                        <strong>${places[i].place_name}</strong><br>
-                        <span style="font-size:11px; color:#666;">${places[i].address_name}</span><br>
-                        <a href="${places[i].place_url}" target="_blank">상세정보 보기 &rarr;</a>
-                    </div>
-                `;
-
-                // 마커 클릭 시 팝업 열기 이벤트
-                kakao.maps.event.addListener(marker, 'click', function() {
-                    openPopup(marker, popupHtmlContent, placePosition);
-                });
-
-                // 리스트 아이템 클릭 시 지도 이동 및 팝업 열기 이벤트
-                itemElement.onclick = function() {
-                    openPopup(marker, popupHtmlContent, placePosition);
-                };
-
-                listContainer.appendChild(itemElement);
-                mapBounds.extend(placePosition);
-            }
-
-            // 모든 마커가 보이도록 지도 중심 및 축척 재조정
-            map.setBounds(mapBounds);
-        }
-
-        // 팝업창을 띄우고 지도를 부드럽게 이동시키는 함수
-        function openPopup(marker, content, position) {
-            infoWindow.setContent(content);
-            infoWindow.open(map, marker);
-            map.panTo(position); // 클릭한 곳으로 부드럽게 중심 이동
-        }
-
-        // [구체적 지시] 기존 마커들을 지도에서 깨끗이 지우는 함수
-        function clearPreviousResults() {
-            for (let i = 0; i < currentMarkers.length; i++) {
-                currentMarkers[i].setMap(null);
-            }
-            currentMarkers = [];
-            infoWindow.close();
-        }
-    </script>
+<p class="p1">&lt;!DOCTYPE html&gt;</p>
+<p class="p1">&lt;html lang="ko"&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta charset="UTF-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;title&gt;우리 동네 열공 &amp; 먹방 지도 서비스&lt;/title&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 기본 스타일 초기화 */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>* {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin: 0;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 0;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>box-sizing: border-box;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>body, html {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>width: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>height: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-family: 'Malgun Gothic', dotum, sans-serif;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 왼쪽(사이드바)과 오른쪽(지도) 2분할 Layout */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.container {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>display: flex;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>width: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>height: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 왼쪽 사이드바 스타일 */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.sidebar {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>width: 380px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>height: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background-color: #f9f9f9;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>display: flex;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>flex-direction: column;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-right: 1px solid #e0e0e0;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>z-index: 10;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 검색창 영역 */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.search-box {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 20px 20px 10px 20px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background-color: #fff;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.search-title {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-size: 16px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: #333;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-bottom: 10px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.search-form {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>display: flex;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>gap: 6px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.search-input {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>flex: 1;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 10px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border: 1px solid #ccc;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 4px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-size: 14px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.search-button {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 10px 16px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background-color: #ffca28;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border: none;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 4px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>cursor: pointer;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: #333;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.search-button:hover {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background-color: #ffb300;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 탭 메뉴 스타일 */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.tab-menu {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>display: flex;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background-color: #fff;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-bottom: 1px solid #e0e0e0;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 0 10px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.tab-item {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>flex: 1;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 12px 0;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>text-align: center;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-size: 14px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: #777;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>cursor: pointer;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-bottom: 3px solid transparent;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>transition: all 0.2s;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 활성화된 탭 스타일 */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.tab-item.active {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: #ffb300;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-bottom: 3px solid #ffb300;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 결과 리스트 영역 (스크롤 가능) */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.places-list {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>flex: 1;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>overflow-y: auto;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 15px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 리스트 내부의 각 장소 아이템 */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.place-item {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 15px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background-color: #fff;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-bottom: 12px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 6px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border: 1px solid #e2e8f0;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>cursor: pointer;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>transition: transform 0.2s, box-shadow 0.2s;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.place-item:hover {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>transform: translateY(-2px);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>box-shadow: 0 4px 6px rgba(0,0,0,0.05);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background-color: #fffdf0;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.place-name {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-size: 16px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: #2d3748;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-bottom: 6px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>.place-phone {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-size: 13px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: #4a5568;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 오른쪽 지도 영역 */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.map-container {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>flex: 1;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>height: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 인포윈도우(팝업) 커스텀 스타일 */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.popup-card {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 10px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-size: 13px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>line-height: 1.4;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.popup-card a {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: #dd6b20;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>text-decoration: none;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/style&gt;</p>
+<p class="p1">&lt;/head&gt;</p>
+<p class="p1">&lt;body&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="container"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="sidebar"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div class="search-box"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div class="search-title"&gt;🏫 우리 동네 열공 &amp; 먹방 스팟&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;form class="search-form" onsubmit="handleSearch(); return false;"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;input type="text" id="keyword" class="search-input" placeholder="동네 이름 입력 (예: 명일동, 홍대)" value="명일동"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;button type="submit" class="search-button"&gt;검색&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/form&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div class="tab-menu"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div class="tab-item active" onclick="changeTab('스터디카페', this)"&gt;스터디카페&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div class="tab-item" onclick="changeTab('식당', this)"&gt;식당&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div class="tab-item" onclick="changeTab('카페', this)"&gt;카페&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div class="tab-item" onclick="changeTab('독서실', this)"&gt;독서실&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div id="placesList" class="places-list"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div id="map" class="map-container"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d6161b499d7ebcb40a09bb45b6b3d55c&amp;libraries=services"&gt;&lt;/script&gt;</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 전역 변수 선언</p>
+<p class="p1"><span class="Apple-converted-space">        </span>let map;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>let placeSearchService;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>let currentMarkers = []; <span class="Apple-converted-space">      </span>// 현재 지도에 표시된 마커 배열</p>
+<p class="p1"><span class="Apple-converted-space">        </span>let infoWindow; <span class="Apple-converted-space">              </span>// 정보창 팝업 객체</p>
+<p class="p1"><span class="Apple-converted-space">        </span>let currentCategory = '스터디카페'; // 기본 선택 카테고리 기본값</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 페이지 로드 완료 시 초기화</p>
+<p class="p1"><span class="Apple-converted-space">        </span>window.addEventListener('DOMContentLoaded', function() {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>if (typeof kakao !== 'undefined' &amp;&amp; kakao.maps) {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>initMap();</p>
+<p class="p1"><span class="Apple-converted-space">            </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>alert("카카오 지도 라이브러리 로딩에 실패했습니다.");</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 지도 생성 함수</p>
+<p class="p1"><span class="Apple-converted-space">        </span>function initMap() {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const mapContainer = document.getElementById('map');<span class="Apple-converted-space"> </span></p>
+<p class="p2"><span class="Apple-converted-space">            </span></p>
+<p class="p1"><span class="Apple-converted-space">            </span>if (navigator.geolocation) {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>navigator.geolocation.getCurrentPosition(function(position) {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>const lat = position.coords.latitude;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>const lon = position.coords.longitude;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>const userPosition = new kakao.maps.LatLng(lat, lon);</p>
+<p class="p2"><span class="Apple-converted-space">                    </span></p>
+<p class="p1"><span class="Apple-converted-space">                    </span>const mapOptions = { center: userPosition, level: 5 };</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>map = new kakao.maps.Map(mapContainer, mapOptions);</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>setupServices();</p>
+<p class="p1"><span class="Apple-converted-space">                </span>}, function() {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>createMapWithDefault();</p>
+<p class="p1"><span class="Apple-converted-space">                </span>});</p>
+<p class="p1"><span class="Apple-converted-space">            </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>createMapWithDefault();</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>function createMapWithDefault() {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const mapContainer = document.getElementById('map');<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">            </span>const defaultPosition = new kakao.maps.LatLng(37.566826, 126.9786567);<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">            </span>const mapOptions = { center: defaultPosition, level: 5 };</p>
+<p class="p1"><span class="Apple-converted-space">            </span>map = new kakao.maps.Map(mapContainer, mapOptions);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>setupServices();</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>function setupServices() {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>placeSearchService = new kakao.maps.services.Places();</p>
+<p class="p1"><span class="Apple-converted-space">            </span>infoWindow = new kakao.maps.InfoWindow({ zIndex: 1 });</p>
+<p class="p2"><span class="Apple-converted-space">            </span></p>
+<p class="p1"><span class="Apple-converted-space">            </span>// 처음 페이지가 열릴 때 기본값('명일동 스터디카페')으로 자동 검색 수행</p>
+<p class="p1"><span class="Apple-converted-space">            </span>searchPlaces();</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 검색 버튼을 누르거나 엔터를 쳤을 때 실행되는 함수</p>
+<p class="p1"><span class="Apple-converted-space">        </span>function handleSearch() {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>// 새롭게 검색어를 치면 첫 번째 탭(스터디카페)으로 UI 초기화 설정</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const tabs = document.querySelectorAll('.tab-item');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>tabs.forEach(tab =&gt; tab.classList.remove('active'));</p>
+<p class="p1"><span class="Apple-converted-space">            </span>tabs[0].classList.add('active');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>currentCategory = '스터디카페';</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>searchPlaces();</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 실제 카카오 API로 검색을 요청하는 함수</p>
+<p class="p1"><span class="Apple-converted-space">        </span>function searchPlaces() {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const areaKeyword = document.getElementById('keyword').value;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>if (!areaKeyword.trim()) {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>alert('동네 이름을 입력해 주세요!');</p>
+<p class="p1"><span class="Apple-converted-space">                </span>return false;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>// [동네 이름] + [선택된 탭 카테고리] 조합 (예: "명일동 + 식당")</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const finalSearchQuery = `${areaKeyword} ${currentCategory}`;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>placeSearchService.keywordSearch(finalSearchQuery, searchCallback);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 탭 메뉴를 클릭했을 때 호출되는 함수</p>
+<p class="p1"><span class="Apple-converted-space">        </span>function changeTab(categoryName, element) {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>// 모든 탭에서 active 스타일 클래스를 지우고 클릭한 탭에만 부여</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const tabs = document.querySelectorAll('.tab-item');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>tabs.forEach(tab =&gt; tab.classList.remove('active'));</p>
+<p class="p1"><span class="Apple-converted-space">            </span>element.classList.add('active');</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>// 현재 선택된 카테고리를 바꾸고 재검색</p>
+<p class="p1"><span class="Apple-converted-space">            </span>currentCategory = categoryName;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>searchPlaces();</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 검색 완료 콜백 함수</p>
+<p class="p1"><span class="Apple-converted-space">        </span>function searchCallback(data, status, pagination) {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>if (status === kakao.maps.services.Status.OK) {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>displayResults(data);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>} else if (status === kakao.maps.services.Status.ZERO_RESULT) {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>clearPreviousResults();</p>
+<p class="p1"><span class="Apple-converted-space">                </span>document.getElementById('placesList').innerHTML = `&lt;div style="padding:20px; color:#999; text-align:center;"&gt;'${currentCategory}' 결과가 없습니다.&lt;/div&gt;`;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>alert('검색 중 오류가 발생했습니다.');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 리스트와 지도 마커를 다시 그려주는 핵심 함수</p>
+<p class="p1"><span class="Apple-converted-space">        </span>function displayResults(places) {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const listContainer = document.getElementById('placesList');</p>
+<p class="p2"><span class="Apple-converted-space">            </span></p>
+<p class="p1"><span class="Apple-converted-space">            </span>// 기존 결과와 마커를 지우기</p>
+<p class="p1"><span class="Apple-converted-space">            </span>clearPreviousResults();</p>
+<p class="p1"><span class="Apple-converted-space">            </span>listContainer.innerHTML = '';</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>const mapBounds = new kakao.maps.LatLngBounds();</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>for (let i = 0; i &lt; places.length; i++) {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>const placePosition = new kakao.maps.LatLng(places[i].y, places[i].x);</p>
+<p class="p2"><span class="Apple-converted-space">                </span></p>
+<p class="p1"><span class="Apple-converted-space">                </span>// 별 모양 커스텀 마커 이미지 적용</p>
+<p class="p1"><span class="Apple-converted-space">                </span>const markerImageSrc = 'https://t1.daumcdn.net/localimg/localimages/07/2012/img/marker_normal.png';<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">                </span>const markerImageSize = new kakao.maps.Size(24, 35);</p>
+<p class="p1"><span class="Apple-converted-space">                </span>const customMarkerImage = new kakao.maps.MarkerImage(markerImageSrc, markerImageSize);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>const marker = new kakao.maps.Marker({</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>position: placePosition,</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>image: customMarkerImage,</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>map: map</p>
+<p class="p1"><span class="Apple-converted-space">                </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>currentMarkers.push(marker);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>// 리스트 아이템 HTML 추가</p>
+<p class="p1"><span class="Apple-converted-space">                </span>const itemElement = document.createElement('div');</p>
+<p class="p1"><span class="Apple-converted-space">                </span>itemElement.className = 'place-item';</p>
+<p class="p1"><span class="Apple-converted-space">                </span>const phoneNumber = places[i].phone ? places[i].phone : '전화번호 없음';</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>itemElement.innerHTML = `</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div class="place-name"&gt;${places[i].place_name}&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div class="place-phone"&gt;📞 ${phoneNumber}&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>`;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>// 팝업 내용 정의</p>
+<p class="p1"><span class="Apple-converted-space">                </span>const popupHtmlContent = `</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;div class="popup-card"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;strong&gt;${places[i].place_name}&lt;/strong&gt;&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;span style="font-size:11px; color:#666;"&gt;${places[i].address_name}&lt;/span&gt;&lt;br&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;a href="${places[i].place_url}" target="_blank"&gt;상세정보 보기 &amp;rarr;&lt;/a&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>`;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>// 이벤트 바인딩</p>
+<p class="p1"><span class="Apple-converted-space">                </span>kakao.maps.event.addListener(marker, 'click', function() {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>openPopup(marker, popupHtmlContent, placePosition);</p>
+<p class="p1"><span class="Apple-converted-space">                </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>itemElement.onclick = function() {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>openPopup(marker, popupHtmlContent, placePosition);</p>
+<p class="p1"><span class="Apple-converted-space">                </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>listContainer.appendChild(itemElement);</p>
+<p class="p1"><span class="Apple-converted-space">                </span>mapBounds.extend(placePosition);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>map.setBounds(mapBounds);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 팝업 생성 및 화면 이동</p>
+<p class="p1"><span class="Apple-converted-space">        </span>function openPopup(marker, content, position) {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>infoWindow.setContent(content);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>infoWindow.open(map, marker);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>map.panTo(position);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 기존 데이터 청소 함수</p>
+<p class="p1"><span class="Apple-converted-space">        </span>function clearPreviousResults() {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>for (let i = 0; i &lt; currentMarkers.length; i++) {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>currentMarkers[i].setMap(null);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>currentMarkers = [];</p>
+<p class="p1"><span class="Apple-converted-space">            </span>infoWindow.close();</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/script&gt;</p>
+<p class="p1">&lt;/body&gt;</p>
+<p class="p1">&lt;/html&gt;</p>
 </body>
 </html>
