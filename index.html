@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>카카오맵 장소 검색 서비스</title>
+    <title>등하굣길 편의시설 지도 서비스</title>
     <style>
         /* 기본 스타일 초기화 */
         * {
@@ -27,7 +27,7 @@
 
         /* 왼쪽: 검색창 및 결과 리스트 영역 */
         .sidebar {
-            width: 350px;
+            width: 380px;
             height: 100%;
             background-color: #f7f7f7;
             display: flex;
@@ -58,7 +58,7 @@
 
         .search-button {
             padding: 10px 15px;
-            background-color: #fee500; /* 카카오 시그니처 노란색 */
+            background-color: #fee500; /* 카카오 노란색 */
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -99,12 +99,33 @@
         .place-address {
             font-size: 13px;
             color: #666;
+            margin-bottom: 5px;
         }
 
-        /* 오른쪽: 지도 영역 */
+        .place-distance {
+            font-size: 12px;
+            color: #ff5722;
+            font-weight: bold;
+        }
+
+        /* 오른쪽: 지도 및 로드뷰 영역 */
+        .map-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
         .map-container {
             flex: 1;
-            height: 100%;
+            width: 100%;
+        }
+
+        /* 로드뷰 영역 (지도 하단에 배치) */
+        .roadview-container {
+            height: 35%;
+            width: 100%;
+            border-top: 2px solid #ccc;
         }
     </style>
 </head>
@@ -114,89 +135,130 @@
         <div class="sidebar">
             <div class="search-box">
                 <form class="search-form" onsubmit="searchPlaces(); return false;">
-                    <input type="text" id="keyword" class="search-input" placeholder="장소를 검색해보세요" value="강남역">
+                    <input type="text" id="keyword" class="search-input" placeholder="편의시설을 검색해보세요 (예: 편의점, 약국)" value="편의점">
                     <button type="submit" class="search-button">검색</button>
                 </form>
             </div>
             <div id="placesList" class="places-list"></div>
         </div>
 
-        <div id="map" class="map-container"></div>
+        <div class="map-wrapper">
+            <div id="map" class="map-container"></div>
+            <div id="roadview" class="roadview-container"></div>
+        </div>
     </div>
 
-    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=[선생님 JS 키]&libraries=services"></script>
+    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d6161b499d7ebcb40a09bb45b6b3d55c&libraries=services"></script>
     
     <script>
-        // 전역 변수 선언 (여러 함수에서 함께 사용하기 위함)
+        // 전역 변수 선언
         let map; 
+        let roadview;
+        let roadviewClient;
         let placeSearchService; 
-        let currentMarkers = []; // 지도에 표시된 마커들을 저장할 배열
+        let currentMarkers = [];       // 검색 결과 마커들을 저장할 배열
+        let userLocationMarker = null; // 사용자의 현재 위치 마커객체 저장 변수
+        let currentInfowindow = null;  // 현재 열려있는 팝업(정보창)을 저장할 변수
+        let userLatitude = null;       // 사용자의 현재 위도
+        let userLongitude = null;      // 사용자의 현재 경도
 
-        // 페이지가 완전히 로드된 후(HTML, 카카오 스크립트 포함) 실행되도록 설정
+        // 페이지가 완전히 로드된 후 실행
         window.addEventListener('DOMContentLoaded', function() {
-            // 카카오 지도 API가 정상적으로 로드되었는지 확인 후 초기화 시작
             if (typeof kakao !== 'undefined' && kakao.maps) {
-                initMap();
+                initMapAndRoadview();
             } else {
                 alert("카카오 지도 라이브러리를 로드하지 못했습니다. API 키를 확인해주세요.");
             }
         });
 
-        // 지도를 초기화하고 현재 위치를 잡는 함수
-        function initMap() {
-            const mapContainer = document.getElementById('map'); // 지도를 표시할 div
-            
-            // 기본 중심 좌표 (위치 권한 거부 시 사용할 서울 시청 좌표)
-            const defaultPosition = new kakao.maps.LatLng(37.566826, 126.9786567); 
+        // 지도, 교통정보, 로드뷰를 초기화하는 함수
+        function initMapAndRoadview() {
+            const mapContainer = document.getElementById('map'); 
+            const defaultPosition = new kakao.maps.LatLng(37.566826, 126.9786567); // 기본 위치 (서울시청)
             
             const mapOptions = {
-                center: defaultPosition, // 지도의 중심좌표
-                level: 5 // 지도의 확대 레벨 (요청하신 level 5)
+                center: defaultPosition, 
+                level: 5 // 지도 확대 레벨 5
             };
 
-            // 지도 생성
+            // 1. 지도 생성
             map = new kakao.maps.Map(mapContainer, mapOptions);
             
-            // 장소 검색 서비스 객체 생성
+            // 2. 교통정보 레이어 추가 (실시간 교통정보 표시)
+            map.addOverlayMapTypeId(kakao.maps.MapTypeId.TRAFFIC);
+            
+            // 3. 로드뷰 생성 및 로드뷰 서비스 객체 선언
+            const roadviewContainer = document.getElementById('roadview');
+            roadview = new kakao.maps.Roadview(roadviewContainer);
+            roadviewClient = new kakao.maps.RoadviewClient();
+            
+            // 4. 장소 검색 서비스 객체 생성
             placeSearchService = new kakao.maps.services.Places();
 
-            // HTML5의 Geolocation(위치 정보)을 사용할 수 있는지 확인
+            // 5. 인포윈도우(팝업) 객체 미리 생성
+            currentInfowindow = new kakao.maps.InfoWindow({ zIndex: 1 });
+
+            // 6. 위치 권한 받아서 현재 위치 가져오기
+            getUserLocation();
+        }
+
+        // 사용자의 GPS 위치를 받아오는 함수
+        function getUserLocation() {
             if (navigator.geolocation) {
-                // 사용자의 현재 위치를 요청
                 navigator.geolocation.getCurrentPosition(function(position) {
-                    const lat = position.coords.latitude; // 위도
-                    const lon = position.coords.longitude; // 경도
-                    
-                    const currentPosition = new kakao.maps.LatLng(lat, lon);
+                    userLatitude = position.coords.latitude;
+                    userLongitude = position.coords.longitude;
+                    const currentPosition = new kakao.maps.LatLng(userLatitude, userLongitude);
                     
                     // 지도의 중심을 현재 위치로 이동
                     map.setCenter(currentPosition);
                     
-                    // 현재 위치에 마커 표시
-                    displayCurrentLocationMarker(currentPosition);
+                    // 현재 위치에 기본 마커 표시
+                    displayUserMarker(currentPosition);
                     
+                    // 최초 로드 시 현재 위치 주변의 로드뷰 보여주기
+                    updateRoadview(currentPosition);
+
                 }, function(error) {
-                    // 위치 권한을 거부하거나 오류가 발생했을 때 처리
                     console.error("위치 권한 획득 실패:", error);
-                    alert("위치 권한을 허용하지 않아 기본 위치(서울시청)로 지도를 표시합니다.");
+                    alert("위치 권한을 허용하지 않아 기본 위치로 설정합니다.");
+                    // 권한 거부 시 기본값 세팅
+                    userLatitude = 37.566826;
+                    userLongitude = 126.9786567;
                 });
             } else {
-                alert("이 브라우저에서는 위치 서비스(Geolocation)를 지원하지 않습니다.");
+                alert("이 브라우저에서는 위치 서비스를 지원하지 않습니다.");
             }
         }
 
-        // 현재 위치에 특별한 마커를 표시하는 함수
-        function displayCurrentLocationMarker(position) {
-            const marker = new kakao.maps.Marker({
+        // 현재 위치 마커를 표시하는 함수
+        function displayUserMarker(position) {
+            // 새로 검색할 때 기존 현재 위치는 지우라는 지시사항에 대응하기 위해, 
+            // 기존 마커가 있다면 지도에서 지우고 새로 생성합니다.
+            if (userLocationMarker) {
+                userLocationMarker.setMap(null);
+            }
+
+            userLocationMarker = new kakao.maps.Marker({
                 map: map,
                 position: position
             });
-            
-            // 인포윈도우로 '현재 위치'라고 표시
+
             const infowindow = new kakao.maps.InfoWindow({
-                content: '<div style="padding:5px;font-size:12px;text-align:center;">내 현재 위치</div>'
+                content: '<div style="padding:5px;font-size:12px;text-align:center;width:150px;">내 현재 위치</div>'
             });
-            infowindow.open(map, marker);
+            infowindow.open(map, userLocationMarker);
+        }
+
+        // 선택한 위치의 좌표를 기반으로 로드뷰를 업데이트하는 함수
+        function updateRoadview(position) {
+            roadviewClient.getNearestPanoId(position, 50, function(panoId) {
+                if (panoId) {
+                    roadview.setPanoId(panoId, position); // 로드뷰 보기
+                } else {
+                    console.log("이 주변에는 로드뷰를 제공하지 않습니다.");
+                }
+            });
         }
 
         // 장소 검색을 수행하는 함수
@@ -204,80 +266,124 @@
             const keyword = document.getElementById('keyword').value;
 
             if (!keyword.replace(/^\s+|\s+$/g, '')) {
-                alert('키word를 입력해주세요!');
+                alert('검색어를 입력해주세요!');
                 return false;
             }
 
-            // 카카오 장소 검색 서비스를 통해 키워드로 장소 검색 요청
-            placeSearchService.keywordSearch(keyword, placesSearchCB);
+            // [구체적 지시] "새로 검색할 때 기존 현재 위치 는 지우기" 반영
+            if (userLocationMarker) {
+                userLocationMarker.setMap(null);
+                userLocationMarker = null;
+            }
+
+            // 현재 지도 중심 또는 내 위치 기준으로 장소 검색 범위 지정 가능 (여기서는 키워드 검색 수행)
+            placeSearchService.keywordSearch(keyword, placesSearchCallback);
         }
 
-        // 장소검색이 완료됐을 때 호출되는 콜백 함수
-        function placesSearchCB(data, status, pagination) {
+        // 장소검색 완료 시 호출되는 콜백 함수
+        function placesSearchCallback(data, status, pagination) {
             if (status === kakao.maps.services.Status.OK) {
-                // 정상적으로 검색이 완료됐으면 검색 목록과 마커를 표출
                 displayPlaces(data);
             } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
                 alert('검색 결과가 존재하지 않습니다.');
             } else if (status === kakao.maps.services.Status.ERROR) {
-                alert('검색 결과 중 오류가 발생했습니다.');
+                alert('검색 중 오류가 발생했습니다.');
             }
         }
 
-        // 검색 결과 목록과 마ker를 표출하는 함수
+        // 검색 결과 목록과 마커를 지도에 표출하는 함수
         function displayPlaces(places) {
             const listEl = document.getElementById('placesList');
             
-            // 기존에 생성되어 있던 마커들과 검색 결과 목록 초기화
+            // 기존 검색 결과 마커 지우기 및 리스트 초기화
             removeMarkers();
             listEl.innerHTML = '';
+            currentInfowindow.close();
 
-            // 지도를 재조정하기 위한 중심 범위 객체 생성
             const bounds = new kakao.maps.LatLngBounds();
 
-            // 검색된 장소 수만큼 반복
             for (let i = 0; i < places.length; i++) {
                 const placePosition = new kakao.maps.LatLng(places[i].y, places[i].x);
                 
-                // 마커 생성 및 지도 표시
-                const marker = addMarker(placePosition);
+                // [구체적 지시] 검색 결과를 지도에 느낌표 모양 커스텀 마커로 표시
+                // 웹상에서 제공하는 무료 마커 이미지(느낌표 아이콘) 주소를 활용합니다.
+                const imageSrc = 'https://t1.daumcdn.net/localimg/localimages/07/2012/img/marker_p.png'; // 느낌표 모양 카카오 기본 마커 이미지 사용
+                const imageSize = new kakao.maps.Size(35, 35); 
+                const markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize);
+
+                const marker = new kakao.maps.Marker({
+                    position: placePosition,
+                    image: markerImage,
+                    map: map
+                });
                 
-                // 검색 결과 HTML 아이템 생성
+                currentMarkers.push(marker);
+
+                // 현재 내 위치 좌표와 편의시설 좌표 사이의 직선 거리 계산 (단위: 미터)
+                let distanceText = "거리 정보 없음";
+                if (userLatitude && userLongitude) {
+                    const userLatLng = new kakao.maps.LatLng(userLatitude, userLongitude);
+                    // 카카오맵 Polyline 객체를 임시로 활용해 실제 거리를 구함
+                    const polyline = new kakao.maps.Polyline({
+                        path: [userLatLng, placePosition]
+                    });
+                    const distance = Math.round(polyline.getLength()); // 미터 단위 반올림
+                    
+                    if (distance >= 1000) {
+                        distanceText = `${(distance / 1000).toFixed(1)} km`;
+                    } else {
+                        distanceText = `${distance} m`;
+                    }
+                }
+
+                // [구체적 지시] 리스트에 현재 위치와 편의시설까지의 거리 나열
                 const itemEl = document.createElement('div');
                 itemEl.className = 'place-item';
                 itemEl.innerHTML = `
                     <div class="place-title">${places[i].place_name}</div>
                     <div class="place-address">${places[i].road_address_name ? places[i].road_address_name : places[i].address_name}</div>
+                    <div class="place-distance">현재 위치로부터: ${distanceText}</div>
                 `;
 
-                // 검색 결과를 클릭했을 때 해당 위치로 지도 이동하는 이벤트 추가
+                // [구체적 지시] 마커 클릭 시 혹은 리스트 아이템 클릭 시 편의시설 정보 팝업 표시 및 로드뷰 연동
+                const popupContent = `
+                    <div style="padding:10px; font-size:13px; font-family:sans-serif; min-width:200px;">
+                        <strong style="display:block; margin-bottom:5px; color:#333;">${places[i].place_name}</strong>
+                        <span style="color:#666; font-size:11px;">${places[i].address_name}</span><br>
+                        <span style="color:#ff5722; font-weight:bold; font-size:11px;">거리: ${distanceText}</span>
+                    </div>
+                `;
+
+                // 마커 클릭 이벤트 등록
+                kakao.maps.event.addListener(marker, 'click', function() {
+                    showInfoWindow(marker, popupContent, placePosition);
+                });
+
+                // 리스트 아이템 클릭 이벤트 등록
                 itemEl.onclick = function() {
-                    map.setCenter(placePosition);
-                    map.setLevel(4); // 클릭 시 조금 더 확대해서 보기 리벨 조절
+                    showInfoWindow(marker, popupContent, placePosition);
                 };
 
                 listEl.appendChild(itemEl);
-
-                // 검색된 장소들의 위치를 기준으로 지도 범위를 넓히기 위해 좌표 추가
                 bounds.extend(placePosition);
             }
 
-            // 검색 결과 위치들을 모두 포함할 수 있도록 지도 중심과 레벨 변경
+            // 지도 검색 결과 범위에 맞추어 지도 중심 이동
             map.setBounds(bounds);
         }
 
-        // 마커를 생성하고 지도 위에 표시하는 함수
-        function addMarker(position) {
-            const marker = new kakao.maps.Marker({
-                position: position,
-                map: map
-            });
+        // 팝업창(InfoWindow)을 띄우고 카메라 및 로드뷰를 이동시키는 공통 함수
+        function showInfoWindow(marker, content, position) {
+            currentInfowindow.setContent(content);
+            currentInfowindow.open(map, marker);
+            map.setCenter(position);
+            map.setLevel(3); // 상세히 볼 수 있도록 확대 변경
             
-            currentMarkers.push(marker); // 추후 삭제를 위해 배열에 저장
-            return marker;
+            // 클릭한 편의시설 위치로 로드뷰 화면 전환
+            updateRoadview(position);
         }
 
-        // 지도 위에 표시되고 있는 마커를 모두 제거하는 함수
+        // 기존 마커 배열 전체 삭제 함수
         function removeMarkers() {
             for (let i = 0; i < currentMarkers.length; i++) {
                 currentMarkers[i].setMap(null);
